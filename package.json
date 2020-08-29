@@ -1,0 +1,14 @@
+{
+  "name": "kz-sub-discord-bot",
+  "version": "2.0.0",
+  "description": "generated admins file from subbed users",
+  "main": "bot.js",
+  "author": "rush2sk8",
+  "dependencies": {
+    "@keyv/postgres": "^1.0.16",
+    "discord.js": "^11.5.1",
+    "dotenv": "^8.2.0",
+    "get-urls": "^9.1.0",
+    "keyv": "^4.0.1"
+  }
+}
