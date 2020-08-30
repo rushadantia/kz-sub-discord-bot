@@ -37,14 +37,13 @@ bot.on('ready', function(evt) {
 })
 
 bot.on('message', async (message) => {
-    print(message.content)
+    //print(message.content)
     currMessage = message
     var content = message.content
 
     if (message.channel.id == WHITELIST_CHANNEL_ID) {
-
-        if (content.match(/http(s)?:\/\/steamcommunity\.com\/(profiles|id)\//g) ||
-		content.match(/^STEAM_[0|2-5]:[01]:\d+$/g)) {
+	print(content)
+        if (content.match(/http(s)?:\/\/steamcommunity\.com\/(profiles|id)\//g) || content.match(/^STEAM_[0-5]:[01]:\d+$/g)) {
 
 	    if(message.content.startsWith("<") && message.content.endsWith(">")) {
 		content = content.slice(1,-1)
