@@ -9,6 +9,10 @@
     "discord.js": "^11.5.1",
     "dotenv": "^8.2.0",
     "get-urls": "^9.1.0",
-    "keyv": "^4.0.1"
+    "keyv": "^4.0.1",
+    "node-fetch": "3.0.0-beta.8",
+    "request": "^2.88.2",
+    "request-promise": "4.2.6",
+    "steamid-parser": "1.0.1"
   }
 }
