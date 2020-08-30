@@ -43,11 +43,11 @@ bot.on('message', async (message) => {
 
     if (message.channel.id == WHITELIST_CHANNEL_ID) {
 
-        if (message.content.match(/https:\/\/steamcommunity\.com\/(profiles|id)\//g)) {
+        if (message.content.match(/http(s)?:\/\/steamcommunity\.com\/(profiles|id)\//g)) {
             let s_id = await parser.get(message.content)
             let renderedSteamID = s_id.getSteam2RenderedID(true)
 
-            await db.set(message.author.id, renderedSteamID)
+            // await db.set(message.author.id, renderedSteamID)
             message.author.send(`Added your steamID: \`${renderedSteamID}\` to the whitelist!`)
             print(`Added ${renderedSteamID}`)
 
@@ -55,7 +55,6 @@ bot.on('message', async (message) => {
             await reloadSubs(message)
             print("reloaded subs")
         }
-        message.delete()
     }
 })
 
