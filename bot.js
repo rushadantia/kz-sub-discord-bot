@@ -18,6 +18,8 @@ const db = new k(db_string)
 var fs = require('fs');
 const request = require('request-promise');
 
+var currMessage = null
+
 db.on('error', err => console.log('Connection Error', err));
 
 bot.on('ready', function(evt) {
@@ -27,6 +29,7 @@ bot.on('ready', function(evt) {
 
 bot.on('message', async (message) => {
     print(message.content)
+    currMessage = message
     const content = message.content
 
     if (message.channel.id == 749366923627593839) {
@@ -44,65 +47,79 @@ bot.on('message', async (message) => {
             }
 
         } else if (content == "!generate") {
-            let subs = message.guild.roles.get(TWITCH_SUB_ROLE).members.map(member => [member.id, member.username])
-            let result = await db.opts.store.query("SELECT * FROM keyv;")
+            await reloadSubs(message)
+        }
+    }
 
-            let map = new Map()
-            message.guild.roles.get(TWITCH_SUB_ROLE).members.map(member => map.set(member.id, member.user.username))
+})
 
-            var whitelist = ""
+async function reloadSubs(message) {
+    let subs = message.guild.roles.get(TWITCH_SUB_ROLE).members.map(member => [member.id, member.username])
+    let result = await db.opts.store.query("SELECT * FROM keyv;")
 
-            result.forEach((v, k) => {
-                let discord_id = String(v["key"]).slice(5)
-                let steam_id = JSON.parse(String(v["value"]))["value"]
+    let map = new Map()
 
-                if (map.has(discord_id)) {
-                    whitelist += steam_id + "  \/\/" + map.get(discord_id) + "\n"
+    if (message !== undefined) {
+        message.guild.roles.get(TWITCH_SUB_ROLE).members.map(member => map.set(member.id, member.user.username))
+    }
+    else {
+    	bot.guilds.cache.get(GUILD_ID).roles.get(TWITCH_SUB_ROLE).members.map(member => map.set(member.id, member.user.username))
+    }
+
+    var whitelist = ""
+
+    result.forEach((v, k) => {
+        let discord_id = String(v["key"]).slice(5)
+        let steam_id = JSON.parse(String(v["value"]))["value"]
+
+        if (map.has(discord_id)) {
+            whitelist += steam_id + "  \/\/" + map.get(discord_id) + "\n"
+        }
+    })
+
+    //write string to file
+    fs.writeFile(WHITELIST_FILENAME, whitelist, (err) => {
+        console.log("done")
+
+        request({
+                url: `https://dathost.net/api/0.1/game-servers/${DH_SERVER_ID}/files/addons/sourcemod/configs/${WHITELIST_FILENAME}`,
+                method: 'POST',
+                auth: {
+                    user: DH_USER,
+                    password: DH_PASS
+                },
+                formData: {
+                    file: fs.createReadStream(WHITELIST_FILENAME)
                 }
             })
-
-            //write string to file
-            fs.writeFile(WHITELIST_FILENAME, whitelist, (err) => {
-                console.log("done")
+            .then(() => {
+                console.log(`uploaded ${WHITELIST_FILENAME}`)
 
                 request({
-                        url: `https://dathost.net/api/0.1/game-servers/${DH_SERVER_ID}/files/addons/sourcemod/configs/${WHITELIST_FILENAME}`,
+                        url: `https://dathost.net/api/0.1/game-servers/${DH_SERVER_ID}/console`,
                         method: 'POST',
                         auth: {
                             user: DH_USER,
                             password: DH_PASS
                         },
                         formData: {
-                            file: fs.createReadStream(WHITELIST_FILENAME)
+                            line: "sm_whitelist_reload; sm_say whitelist reloaded"
                         }
                     })
-                    .then(() => {
-                        console.log(`uploaded ${WHITELIST_FILENAME}`)
-
-                        request({
-                                url: `https://dathost.net/api/0.1/game-servers/${DH_SERVER_ID}/console`,
-                                method: 'POST',
-                                auth: {
-                                    user: DH_USER,
-                                    password: DH_PASS
-                                },
-                                formData: {
-                                    line: "sm_whitelist_reload; sm_say whitelist reloaded"
-                                }
-                            })
-                            .then(() => {
-                                message.channel.send("`Server has been refreshed with new players`")
-                            })
-                            .catch(console.error)
-                    })
+                    .then(() =>{console.log("finished reloading")})
                     .catch(console.error)
             })
-        }
-    }
+            .catch(console.error)
+    })
+}
 
-})
+setInterval(async function() {
+ 		await reloadSubs(currMessage)
+        console.log("reloaded")
+}, parseInt(process.env.TIME_RELOAD) * 60000)
 
 function print(x) { console.log(x) }
+
 /* sudo apt update
 sudo apt install postgresql postgresql-contrib
 sudo -i -u postgres
