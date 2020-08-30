@@ -33,27 +33,35 @@ db.on('error', err => console.log('Connection Error', err));
 
 bot.on('ready', function(evt) {
     console.log("bot connected")
-    bot.user.setActivity(".help | by rush2sk8", { type: "STREAMING", url: "https://www.twitch.tv/rush2sk8" })
+    bot.user.setActivity("by rush2sk8", { type: "STREAMING", url: "https://www.twitch.tv/nykan" })
 })
 
 bot.on('message', async (message) => {
     print(message.content)
     currMessage = message
-    const content = message.content
+    var content = message.content
 
     if (message.channel.id == WHITELIST_CHANNEL_ID) {
 
-        if (message.content.match(/http(s)?:\/\/steamcommunity\.com\/(profiles|id)\//g)) {
-            let s_id = await parser.get(message.content)
+        if (content.match(/http(s)?:\/\/steamcommunity\.com\/(profiles|id)\//g) ||
+		content.match(/^STEAM_[0|2-5]:[01]:\d+$/g)) {
+
+	    if(message.content.startsWith("<") && message.content.endsWith(">")) {
+		content = content.slice(1,-1)
+	    }
+	    
+            let s_id = await parser.get(content)
             let renderedSteamID = s_id.getSteam2RenderedID(true)
 
-            // await db.set(message.author.id, renderedSteamID)
+            await db.set(message.author.id, renderedSteamID)
             message.author.send(`Added your steamID: \`${renderedSteamID}\` to the whitelist!`)
             print(`Added ${renderedSteamID}`)
-
-        } else if (content == "!generate" && message.member.roles.has(TWITCH_MOD_ROLE_ID)) {
+	    await reloadSubs(message)
+        
+	 } else if (content == "!generate" && message.member.roles.has(TWITCH_MOD_ROLE_ID)) {
             await reloadSubs(message)
             print("reloaded subs")
+	    message.author.send("Reloaded server")
         }
     }
 })
