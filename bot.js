@@ -4,11 +4,20 @@ var Discord = require('discord.js')
 const bot = new Discord.Client()
 bot.login(process.env.DISCORD_TOKEN)
 
+const Parser = require("steamid-parser")
+
+const parser = new Parser(process.env.STEAM_API_KEY, {
+    checkForAccountID: false,
+    checkNumberForVanity: false
+})
+
 const TWITCH_SUB_ROLE = process.env.TWITCH_SUB_ROLE
 const WHITELIST_FILENAME = process.env.WHITELIST_FILENAME
 const DH_USER = process.env.DH_USER
 const DH_PASS = process.env.DH_PASS
 const DH_SERVER_ID = process.env.DH_SERVER_ID
+const WHITELIST_CHANNEL_ID = process.env.WHITELIST_CHANNEL_ID
+const TWITCH_MOD_ROLE_ID = process.env.TWITCH_MOD_ROLE_ID
 
 const k = require('keyv');
 
@@ -32,25 +41,22 @@ bot.on('message', async (message) => {
     currMessage = message
     const content = message.content
 
-    if (message.channel.id == 749366923627593839) {
+    if (message.channel.id == WHITELIST_CHANNEL_ID) {
 
-        let id = content.match(/^STEAM_[0-5]:[01]:\d+$/g)
+        if (message.content.match(/https:\/\/steamcommunity\.com\/profiles\//g)) {
+            let s_id = await parser.get(message.content)
+            let renderedSteamID = s_id.getSteam2RenderedID(true)
 
-        if (id) {
-            var isNonOneAccount = id[0].match(/^STEAM_[0|2-5]:[01]:\d+$/g)
+            await db.set(message.author.id, renderedSteamID)
+            message.author.send(`Added your steamID: \`${renderedSteamID}\` to the whitelist!`)
+            print(`Added ${renderedSteamID}`)
 
-            if (isNonOneAccount) {
-                isNonOneAccount = isNonOneAccount[0].replace(/STEAM_[0|2-5]/g, "STEAM_1")
-                await db.set(message.author.id, isNonOneAccount)
-            } else {
-                await db.set(message.author.id, id)
-            }
-
-        } else if (content == "!generate") {
+        } else if (content == "!generate" && message.member.roles.has(TWITCH_MOD_ROLE_ID)) {
             await reloadSubs(message)
+            print("reloaded subs")
         }
+        message.delete()
     }
-
 })
 
 async function reloadSubs(message) {
@@ -61,9 +67,8 @@ async function reloadSubs(message) {
 
     if (message !== undefined) {
         message.guild.roles.get(TWITCH_SUB_ROLE).members.map(member => map.set(member.id, member.user.username))
-    }
-    else {
-    	bot.guilds.cache.get(GUILD_ID).roles.get(TWITCH_SUB_ROLE).members.map(member => map.set(member.id, member.user.username))
+    } else {
+        bot.guilds.cache.get(GUILD_ID).roles.get(TWITCH_SUB_ROLE).members.map(member => map.set(member.id, member.user.username))
     }
 
     var whitelist = ""
@@ -106,7 +111,7 @@ async function reloadSubs(message) {
                             line: "sm_whitelist_reload; sm_say whitelist reloaded"
                         }
                     })
-                    .then(() =>{console.log("finished reloading")})
+                    .then(() => { console.log("finished reloading") })
                     .catch(console.error)
             })
             .catch(console.error)
@@ -114,8 +119,8 @@ async function reloadSubs(message) {
 }
 
 setInterval(async function() {
- 		await reloadSubs(currMessage)
-        console.log("reloaded")
+    await reloadSubs(currMessage)
+    console.log("reloaded")
 }, parseInt(process.env.TIME_RELOAD) * 60000)
 
 function print(x) { console.log(x) }

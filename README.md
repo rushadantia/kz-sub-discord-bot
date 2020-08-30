@@ -24,3 +24,9 @@ DH_SERVER_ID - Server of the whitelist
 WHITELIST_FILENAME - Name of the whitelist file
 
 TIME_RELOAD - In mins
+
+WHITELIST_CHANNEL_ID - The channelid of the whitelist channel
+
+STEAM_API_KEY - Steam Web API Key
+
+TWITCH_MOD_ROLE_ID - Twitch Mod Role ID
