@@ -43,7 +43,7 @@ bot.on('message', async (message) => {
 
     if (message.channel.id == WHITELIST_CHANNEL_ID) {
 
-        if (message.content.match(/https:\/\/steamcommunity\.com\/profiles\//g)) {
+        if (message.content.match(/https:\/\/steamcommunity\.com\/(profiles|id)\//g)) {
             let s_id = await parser.get(message.content)
             let renderedSteamID = s_id.getSteam2RenderedID(true)
 
