@@ -28,53 +28,66 @@ var fs = require('fs');
 const request = require('request-promise');
 
 var currMessage = null
+var guild = undefined
 
 db.on('error', err => console.log('Connection Error', err));
 
 bot.on('ready', function(evt) {
+
+    guild = bot.guilds.cache.get("423933447770472448")
     console.log("bot connected")
-    bot.user.setActivity("by rush2sk8", { type: "STREAMING", url: "https://www.twitch.tv/nykan" })
+
+    bot.user.setActivity(".help | by rush2sk8", { type: "STREAMING", url: "https://www.twitch.tv/rush2sk8" })
 })
 
 bot.on('message', async (message) => {
-    //print(message.content)
+    print(message.content)
     currMessage = message
-    var content = message.content
+    const content = message.content
 
     if (message.channel.id == WHITELIST_CHANNEL_ID) {
-	print(content)
-        if (content.match(/http(s)?:\/\/steamcommunity\.com\/(profiles|id)\//g) || content.match(/^STEAM_[0-5]:[01]:\d+$/g)) {
 
-	    if(message.content.startsWith("<") && message.content.endsWith(">")) {
-		content = content.slice(1,-1)
-	    }
-	    
-            let s_id = await parser.get(content)
+        if (message.content.match(/http(s)?:\/\/steamcommunity\.com\/(profiles|id)\//g)) {
+            let s_id = await parser.get(message.content)
             let renderedSteamID = s_id.getSteam2RenderedID(true)
 
-            await db.set(message.author.id, renderedSteamID)
+            // await db.set(message.author.id, renderedSteamID)
             message.author.send(`Added your steamID: \`${renderedSteamID}\` to the whitelist!`)
             print(`Added ${renderedSteamID}`)
-	    await reloadSubs(message)
-        
-	 } else if (content == "!generate" && message.member.roles.has(TWITCH_MOD_ROLE_ID)) {
+
+        } else if (content == "!generate" && message.member.roles.cache.has(TWITCH_MOD_ROLE_ID)) {
             await reloadSubs(message)
+            message.author.send('reloaded server')
             print("reloaded subs")
-	    message.author.send("Reloaded server")
+        } else if (content == "!loadcache" && message.member.roles.cache.has(TWITCH_MOD_ROLE_ID)) {
+            let result = await db.opts.store.query("SELECT * FROM keyv;")
+            let m = []
+
+            result.forEach((v, k) => {
+                let discord_id = String(v["key"]).slice(5)
+                m.push(discord_id)
+            })
+            console.log(m)
+            for (var i = 0; i < m.length; i++) {
+                console.log(m[i])
+                await message.guild.members.fetch(m[i])
+            }
+            message.author.send("Loaded cache")
+            console.log(message.guild.members)
         }
     }
 })
 
 async function reloadSubs(message) {
-    let subs = message.guild.roles.get(TWITCH_SUB_ROLE).members.map(member => [member.id, member.username])
+    let subs = message.guild.roles.cache.get(TWITCH_SUB_ROLE).members.map(member => [member.id, member.username])
     let result = await db.opts.store.query("SELECT * FROM keyv;")
 
     let map = new Map()
 
     if (message !== undefined) {
-        message.guild.roles.get(TWITCH_SUB_ROLE).members.map(member => map.set(member.id, member.user.username))
+        message.guild.roles.cache.get(TWITCH_SUB_ROLE).members.map(member => map.set(member.id, member.user.username))
     } else {
-        bot.guilds.cache.get(GUILD_ID).roles.get(TWITCH_SUB_ROLE).members.map(member => map.set(member.id, member.user.username))
+        guild.roles.cache.get(TWITCH_SUB_ROLE).members.map(member => map.set(member.id, member.user.username))
     }
 
     var whitelist = ""
@@ -88,7 +101,7 @@ async function reloadSubs(message) {
         }
     })
 
-    //write string to file
+     
     fs.writeFile(WHITELIST_FILENAME, whitelist, (err) => {
         console.log("done")
 
@@ -114,7 +127,7 @@ async function reloadSubs(message) {
                             password: DH_PASS
                         },
                         formData: {
-                            line: "sm_whitelist_reload; sm_say whitelist reloaded"
+                            line: "sm_say whitelist reloaded"
                         }
                     })
                     .then(() => { console.log("finished reloading") })
@@ -122,6 +135,7 @@ async function reloadSubs(message) {
             })
             .catch(console.error)
     })
+    console.log(whitelist)
 }
 
 setInterval(async function() {
