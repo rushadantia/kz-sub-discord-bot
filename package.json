@@ -6,7 +6,7 @@
   "author": "rush2sk8",
   "dependencies": {
     "@keyv/postgres": "^1.0.16",
-    "discord.js": "^11.5.1",
+    "discord.js": "^12.4.1",
     "dotenv": "^8.2.0",
     "get-urls": "^9.1.0",
     "keyv": "^4.0.1",
