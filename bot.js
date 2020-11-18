@@ -41,23 +41,25 @@ bot.on('ready', function(evt) {
 })
 
 bot.on('message', async (message) => {
-    print(message.content)
+
     currMessage = message
     const content = message.content
 
     if (message.channel.id == WHITELIST_CHANNEL_ID) {
-
-        if (message.content.match(/http(s)?:\/\/steamcommunity\.com\/(profiles|id)\//g)) {
+    	print(message.content)
+        
+	if (message.content.match(/http(s)?:\/\/steamcommunity\.com\/(profiles|id)\//g) || content.match(/^STEAM_[0-5]:[01]:\d+$/g) ) {
             let s_id = await parser.get(message.content)
             let renderedSteamID = s_id.getSteam2RenderedID(true)
 
-             await db.set(message.author.id, renderedSteamID)
+            await db.set(message.author.id, renderedSteamID)
             message.author.send(`Added your steamID: \`${renderedSteamID}\` to the whitelist!`)
-            print(`Added ${renderedSteamID}`)
-            await reloadSubs(message)
+            print(`Added ${renderedSteamID} ${message.author.id}`)
+	    await reloadSubs(message)
+
         } else if (content == "!generate" && message.member.roles.cache.has(TWITCH_MOD_ROLE_ID)) {
             await reloadSubs(message)
-            message.author.send('reloaded server')
+	    message.author.send('reloaded server')
             print("reloaded subs")
         } else if (content == "!loadcache" && message.member.roles.cache.has(TWITCH_MOD_ROLE_ID)) {
             let result = await db.opts.store.query("SELECT * FROM keyv;")
@@ -70,7 +72,10 @@ bot.on('message', async (message) => {
             console.log(m)
             for (var i = 0; i < m.length; i++) {
                 console.log(m[i])
-                await message.guild.members.fetch(m[i])
+		message.author.send(m[i])
+                await message.guild.members.fetch(m[i]).catch(e => {
+			console.log(e)
+		})
             }
             message.author.send("Loaded cache")
             console.log(message.guild.members)
@@ -87,7 +92,7 @@ async function reloadSubs(message) {
     if (message !== undefined) {
         message.guild.roles.cache.get(TWITCH_SUB_ROLE).members.map(member => map.set(member.id, member.user.username))
     } else {
-        guild.roles.cache.get(TWITCH_SUB_ROLE).members.map(member => map.set(member.id, member.user.username))
+    	return
     }
 
     var whitelist = ""
@@ -101,7 +106,6 @@ async function reloadSubs(message) {
         }
     })
 
-     
     fs.writeFile(WHITELIST_FILENAME, whitelist, (err) => {
         console.log("done")
 
@@ -127,7 +131,7 @@ async function reloadSubs(message) {
                             password: DH_PASS
                         },
                         formData: {
-                            line: "sm_say whitelist reloaded"
+                            line: "sm_whitelist_reload;sm_say whitelist reloaded"
                         }
                     })
                     .then(() => { console.log("finished reloading") })
